@@ -1,0 +1,38 @@
+
+<%- include('layout/header', { title, user }) %>
+
+<div class="page">
+  <h1>Oops! Something went wrong</h1>
+  
+  <div class="alert alert-error">
+    <strong>Error:</strong> <%= error.message || 'An unexpected error occurred' %>
+  </div>
+
+  <% if(error.status === 404){ %>
+    <p>The page you're looking for doesn't exist.</p>
+    <p>Here are some helpful links:</p>
+    <ul>
+      <li><a href="/">Home Page</a></li>
+      <li><a href="/example">Example Page</a></li>
+      <% if(user) { %>
+        <li><a href="/protected">Protected Page</a></li>
+      <% } else { %>
+        <li><a href="/login">Login</a></li>
+      <% } %>
+    </ul>
+  <% } else { %>
+    <p>We're sorry, but something went wrong on our end.</p>
+    <p>Please try again later or <a href="/">return to the home page</a>.</p>
+  <% } %>
+
+  <% if(process.env.NODE_ENV === 'development' && error.stack) { %>
+    <details style="margin-top: 2rem;">
+      <summary>Error Details (Development Mode)</summary>
+      <pre style="background: #f8f9fa; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.9rem;">
+        <%= error.stack %>
+      </pre>
+    </details>
+  <% } %>
+</div>
+
+<%- include('layout/footer', { title, user }) %>

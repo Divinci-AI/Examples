@@ -1,0 +1,52 @@
+<%- include('layout/header', { title, user }) %>
+
+<div class="page">
+  <h1>Welcome to SSR External Login Demo</h1>
+  
+  <% if(user) { %>
+    <div>
+      <p>Hello, <strong><%= user.name %></strong>! You are logged in.</p>
+      <p>This demo shows how to integrate Divinci chat with external authentication in a Server-Side Rendered application.</p>
+    </div>
+  <% } else { %>
+    <div>
+      <p>This demo shows how to integrate Divinci chat with external authentication in a Server-Side Rendered application.</p>
+      <p>Please <a href="/login">log in</a> to access the protected chat features.</p>
+    </div>
+  <% } %>
+
+  <h2>How it works</h2>
+  <ol>
+    <li><strong>User Authentication:</strong> Users log in with your existing authentication system</li>
+    <li><strong>Server-Side Sessions:</strong> User info stored in server sessions</li>
+    <li><strong>JWT Trading:</strong> Server trades user info for Divinci JWT during page render</li>
+    <li><strong>Embed Integration:</strong> JWT passed directly to embed script via data attributes</li>
+    <li><strong>Origin Validation:</strong> Divinci validates that your domain is authorized</li>
+  </ol>
+
+  <h2>Demo Pages</h2>
+  <ul>
+    <li><a href="/example">Example Page</a> - Public page accessible to everyone</li>
+    <% if(user){ %>
+      <li><a href="/protected">Protected Page</a> - Private page with chat (requires login)</li>
+    <% } else { %>
+      <li>Protected Page - Private page with chat (requires <a href="/login">login</a>)</li>
+    <% } %>
+  </ul>
+
+  <h2>Test Users</h2>
+  <p>You can log in with any of these test accounts:</p>
+  <ul>
+    <li><strong>alice</strong> / password123</li>
+    <li><strong>bob</strong> / secret456</li>
+    <li><strong>charlie</strong> / test789</li>
+  </ul>
+
+  <% if(user){ %>
+    <div class="alert alert-success">
+      <strong>You're logged in!</strong> Try visiting the <a href="/protected">Protected Page</a> to see the chat integration in action.
+    </div>
+  <% } %>
+</div>
+
+<%- include('layout/footer', { title, user }) %>

@@ -1,0 +1,21 @@
+  </main>
+
+  <script>
+    // Simple dropdown toggle
+    function toggleDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.classList.toggle('hidden');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('userDropdown');
+      const toggle = document.querySelector('.dropdown-toggle');
+      
+      if (dropdown && !dropdown.contains(event.target) && !toggle.contains(event.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<%- include('layout/header', { title, user }) %>
+
+<div class="page">
+  <h1>Example Page</h1>
+  <p>This is a public example page that anyone can access, whether logged in or not.</p>
+
+  <h2>About This Demo</h2>
+  <p>
+    This Server-Side Rendered (SSR) application demonstrates how to integrate Divinci chat 
+    with external authentication. The key concepts are:
+  </p>
+
+  <ul>
+    <li><strong>External Authentication:</strong> Users authenticate with your existing system</li>
+    <li><strong>Server-Side Sessions:</strong> User info stored securely on the server</li>
+    <li><strong>JWT Trading:</strong> Server exchanges user info for Divinci JWTs during render</li>
+    <li><strong>Direct Integration:</strong> JWT passed to embed script via data attributes</li>
+    <li><strong>Origin Validation:</strong> Divinci validates authorized domains</li>
+  </ul>
+
+  <h2>Technical Implementation</h2>
+  <p>This demo uses:</p>
+  <ul>
+    <li><strong>Express:</strong> Node.js web framework</li>
+    <li><strong>EJS:</strong> Embedded JavaScript templating</li>
+    <li><strong>Sessions:</strong> Server-side session management</li>
+    <li><strong>Server-Side Rendering:</strong> Pages rendered on the server</li>
+    <li><strong>Divinci Embed:</strong> Chat integration via script tag with data attributes</li>
+  </ul>
+
+  <h2>Authentication Flow</h2>
+  <ol>
+    <li>User submits login form to server</li>
+    <li>Server validates credentials and creates session</li>
+    <li>Protected pages check session before rendering</li>
+    <li>Server gets fresh JWT from Divinci during page render</li>
+    <li>JWT embedded directly in page HTML via script data attributes</li>
+    <li>Embed script auto-authenticates on page load</li>
+  </ol>
+
+  <div class="alert alert-info">
+    <strong>Try it out:</strong> <a href="/login">Log in</a> and visit the <a href="/protected">Protected Page</a> to see the chat integration in action.
+  </div>
+
+  <h2>SSR vs SPA</h2>
+  <p>This SSR approach differs from the SPA version:</p>
+  <ul>
+    <li><strong>Server-Side Sessions:</strong> No client-side token management needed</li>
+    <li><strong>Page Redirects:</strong> Traditional form submissions and redirects</li>
+    <li><strong>Direct JWT Embedding:</strong> JWT passed in HTML, not via API calls</li>
+    <li><strong>Immediate Chat Load:</strong> Chat authenticates instantly on page load</li>
+    <li><strong>SEO Friendly:</strong> Content rendered on server for better SEO</li>
+  </ul>
+
+  <p>
+    This structure is ideal for traditional web applications and provides excellent 
+    performance and SEO benefits while maintaining secure chat integration.
+  </p>
+</div>
+
+<%- include('layout/footer', { title, user }) %>

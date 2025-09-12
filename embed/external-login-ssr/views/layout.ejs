@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'SSR External Login Demo' %></title>
+  <link rel="stylesheet" href="/static/style.css">
+
+  <!-- Load Divinci embed script with JWT -->
+  <% if(divinciUserToken || divinciEmbed.displayLoggedOutChat) { %>
+    <script
+      src="<%- escapeHTMLAttribute(divinciEmbed.embedScriptUrl) %>"
+      divinci-release="<%- escapeHTMLAttribute(divinciEmbed.releaseId) %>"
+      <% if(divinciUserToken){ %>
+      divinci-external-user="<%- escapeHTMLAttribute(divinciUserToken) %>"
+      <% } else if(divinciEmbed.displayLoggedOutChat) { %>
+      divinci-external-user
+      <% } %>
+      debug
+    ></script>
+  <% } %>
+
+</head>
+<body>
+  <header class="header">
+    <nav class="nav">
+      <a href="/" class="nav-brand">SSR Demo</a>
+      
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/example">Example</a></li>
+        <% if (typeof user !== 'undefined' && user) { %>
+          <li><a href="/protected">Protected</a></li>
+        <% } %>
+        
+        <li>
+          <% if (typeof user !== 'undefined' && user) { %>
+            <div class="dropdown">
+              <button class="dropdown-toggle" onclick="toggleDropdown()">
+                <img src="<%= user.picture %>" alt="<%= user.name %>" class="user-avatar">
+                <span><%= user.name %></span>
+                <span>▼</span>
+              </button>
+              
+              <div id="userDropdown" class="dropdown-menu hidden">
+                <div class="dropdown-item">
+                  <strong><%= user.name %></strong><br>
+                  <small>@<%= user.username %></small>
+                </div>
+                <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #dee2e6;">
+                <a href="/protected" class="dropdown-item">Protected Page</a>
+                <form action="/auth/logout" method="POST" style="margin: 0;">
+                  <button type="submit" class="dropdown-item" style="width: 100%; text-align: left;">
+                    Logout
+                  </button>
+                </form>
+              </div>
+            </div>
+          <% } else { %>
+            <a href="/login" class="btn btn-primary">Login</a>
+          <% } %>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <%- body %>
+  </main>
+
+  <script>
+    // Simple dropdown toggle
+    function toggleDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.classList.toggle('hidden');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('userDropdown');
+      const toggle = document.querySelector('.dropdown-toggle');
+      
+      if (dropdown && !dropdown.contains(event.target) && !toggle.contains(event.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

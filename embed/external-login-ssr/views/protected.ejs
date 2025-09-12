@@ -1,0 +1,69 @@
+<%- include('layout/header', { title, user }) %>
+
+<div class="page">
+  <h1>Protected Page</h1>
+  <p>Welcome, <strong><%= user.name %></strong>! This page is only accessible to logged-in users.</p>
+  
+  <div class="alert alert-success">
+    <strong>Authentication Status:</strong> Logged in as <%= user.username %>
+  </div>
+
+  <h2>Divinci Chat Integration</h2>
+  <p>
+    This page demonstrates server-side JWT integration with Divinci chat.
+    The chat below loads automatically with your authentication.
+  </p>
+
+  <% if(error) { %>
+    <div class="alert alert-error">
+      <strong>Chat Error:</strong> <%= error %>
+    </div>
+  <% } %>
+
+  <% if(divinciUserToken) { %>
+    <div class="alert alert-success">
+      <strong>Chat Status:</strong> Authentication successful, chat ready!
+    </div>
+
+    <h3>Technical Details</h3>
+    <ul>
+      <li><strong>User ID:</strong> <%= user.id %></li>
+      <li><strong>JWT:</strong> <%= divinciUserToken.substring(0, 20) %>... (truncated)</li>
+      <li><strong>Release ID:</strong> <%= divinciEmbed.releaseId %></li>
+      <li><strong>Integration:</strong> Server-side JWT embedding</li>
+    </ul>
+  <% } else { %>
+    <div class="alert alert-error">
+      <strong>Chat Status:</strong> Failed to get authentication token
+    </div>
+  <% } %>
+
+  <!-- Chat will be injected here by embed script -->
+  <div id="chat-container"></div>
+
+  <h2>How This Works</h2>
+  <ol>
+    <li>You logged in with your credentials</li>
+    <li>Server verified your identity and created a session</li>
+    <li>Server requested a fresh JWT from Divinci during page render</li>
+    <li>JWT was embedded directly in the page HTML</li>
+    <li>Embed script loaded and auto-authenticated with the embedded JWT</li>
+    <li>Divinci validated your origin and JWT</li>
+    <li>Chat is now ready for secure communication</li>
+  </ol>
+
+  <h2>SSR Benefits</h2>
+  <ul>
+    <li><strong>Immediate Authentication:</strong> No client-side API calls needed</li>
+    <li><strong>Server-Side Security:</strong> JWT trading happens on secure server</li>
+    <li><strong>Fast Loading:</strong> Chat authenticates instantly on page load</li>
+    <li><strong>SEO Friendly:</strong> Content rendered on server</li>
+    <li><strong>Simple Client:</strong> No complex state management needed</li>
+  </ul>
+
+  <p>
+    <a href="/">← Back to Home</a>
+  </p>
+</div>
+
+<%- include('layout/footer', { title, user }) %>

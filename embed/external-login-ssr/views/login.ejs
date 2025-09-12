@@ -1,0 +1,94 @@
+<%- include('layout/header', { title, user: null }) %>
+<% 
+const TEST_USERS = [
+  { name: "Alice Johnson", username: "alice", password: "password123" },
+  { name: "Bob Smith", username: "bob", password: "secret456" },
+  { name: "Charlie Brown", username: "charlie", password: "test789" },
+];
+%>
+
+<div class="page">
+  <h1>Login</h1>
+  <p>Please log in to access the protected chat features.</p>
+
+  <form action="/auth/login" method="POST" class="form">
+    <% if(error) { %>
+      <div class="alert alert-error">
+        <%= error %>
+      </div>
+    <% } %>
+    <div class="form-group">
+      <label for="username" class="form-label">Username</label>
+      <input 
+        type="text" 
+        id="username" 
+        name="username" 
+        class="form-input" 
+        value="<%- username ? escapeHTMLAttribute(username) : '' %>"
+        required
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="password" class="form-label">Password</label>
+      <input 
+        type="password" 
+        id="password" 
+        name="password" 
+        class="form-input" 
+        required
+      >
+    </div>
+
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary" style="width: 100%;">
+        Login
+      </button>
+    </div>
+  </form>
+
+  <div style="margin-top: 2rem; padding: 1rem; background-color: #f8f9fa; border-radius: 4px;">
+    <h3>Test Users</h3>
+    <p>You can use any of these test accounts:</p>
+    <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+      <% for(const user of TEST_USERS) { %>
+        <div class="test-user-card">
+          <strong><%= user.name %></strong><br>
+          <code><%= user.username %> / <%= user.password %></code>
+          <div>
+            <button class="btn btn-secondary" >Login as <%= user.name %></button>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+  <script>
+    const users = document.querySelectorAll('.test-user-card');
+    for(const user of users){
+      const button = user.querySelector('button');
+      button.addEventListener('click', function(){
+        const [username, password] = user.querySelector('code').textContent.split(' / ');
+        document.querySelector('#username').value = username;
+        document.querySelector('#password').value = password;
+      });
+    }
+  </script>
+</div>
+
+<style>
+  .test-user-card {
+    padding: 1rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .test-user-card code {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.9rem;
+  }
+</style>
+
+<%- include('layout/footer', { title, user: null }) %>

@@ -1,0 +1,29 @@
+<%- include('layout/header', { title, user }) %>
+
+<div class="page">
+  <h1>Full Page App</h1>
+  <div id="chat-container"></div>
+  <script type="text/javascript">
+    const { DivinciChat } = window.DIVINCI_AI;
+    const releaseId = "<%- escapeHTMLAttribute(divinciEmbed.releaseId) %>"
+    const divinciChat = new DivinciChat({
+      releaseId: releaseId,
+      externalLogin: true,
+      toggleable: false,
+      debug: false,
+    });
+
+    const container = document.querySelector("#chat-container");
+    container.appendChild(divinciChat.iframe);
+    divinciChat.iframe.style.width = "100%";
+    divinciChat.iframe.style.height = "70vh";
+    divinciChat.iframe.style.border = "none";
+
+    const USER_TOKEN = "<%- escapeHTMLAttribute(divinciUserToken || "") %>";
+    if(USER_TOKEN) {
+      divinciChat.auth.login(USER_TOKEN);
+    }
+  </script>
+</div>
+
+<%- include('layout/footer', { title, user }) %>

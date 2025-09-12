@@ -1,0 +1,23 @@
+[
+  {
+    "id": "user1",
+    "username": "alice",
+    "password": "password123",
+    "name": "Alice Johnson",
+    "picture": "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face"
+  },
+  {
+    "id": "user2", 
+    "username": "bob",
+    "password": "secret456",
+    "name": "Bob Smith",
+    "picture": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
+  },
+  {
+    "id": "user3",
+    "username": "charlie",
+    "password": "test789",
+    "name": "Charlie Brown",
+    "picture": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
+  }
+]
