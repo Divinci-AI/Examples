@@ -1,0 +1,255 @@
+:root {
+  --background-gradient-end: rgba(255, 252, 248);
+  --background-gradient-mid: rgba(255, 246, 246, 0.1195071778711485);
+  --background-gradient-start: rgba(252, 247, 255, 0.32679009103641454);
+  --chat-transcript-bg-end: rgba(148, 187, 233, 0.03547356442577032);
+  --chat-transcript-bg-start: rgba(238, 174, 202, 0.04947916666666663);
+  --divi-dark-purp: #1c134d;
+  --divi-purp: #574d8d;
+  --divi-light-purp: #5742d0;
+  --hightlight-orange: #8a682a;
+  --sidebar-menus-width: 92%;
+  --main-header-gradient-end: rgb(233 229 248);
+  --main-header-gradient-mid: rgb(241 241 243);
+  --main-header-gradient-start: rgb(245 245 253);
+  --right-drawer-width: 0px;
+  --sidebar-width: 17px;
+  --drawer-button-width: 44px;
+  --sidebar-open-width: 250px;
+  --mobile-menu-width: 40px;
+  --response-chat-card-bg: #d8d8dd;
+  --white-black: white;
+
+  /* SHINY BUTTON */
+  --shine-fg: #000;
+  /* DIVINCI COLORS */
+  --shine-bg: #e5e5ef;
+  --shine-bg-subtle: #d3d1e8;
+  --shine-highlight: #8f8abf;
+  --shine-highlight-subtle: #7764d4;
+
+  /* Dark mode color variables */
+  --dm-scheme-main-l: 11%;
+  --dm-background-l: 14%;
+  --dm-text-l: 71%;
+  --dm-border-weak-l: 21%;
+  --dm-border-l: 24%;
+  --dm-text-weak-l: 53%;
+  --dm-text-strong-l: 93%;
+  --dm-text-title-l: 100%;
+  --button-bg-color: #ffffff;
+  --button-text-color: #000000;
+}
+
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-gradient {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+@property --gradient-angle-offset {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@property --gradient-percent {
+  syntax: "<percentage>";
+  initial-value: 5%;
+  inherits: false;
+}
+
+@property --gradient-shine {
+  syntax: "<color>";
+  initial-value: rgb(28, 19, 77);
+  inherits: false;
+}
+
+@keyframes rotate-gradient {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+.shine {
+  --animation: gradient-angle linear infinite;
+  --duration: 3s;
+  --shadow-size: 2px;
+  border-radius: 0.5em;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 500;
+  isolation: isolate;
+  line-height: 1;
+  outline-offset: 4px;
+  overflow: hidden;
+  padding: 1em 2em;
+  color: white;
+  position: relative;
+  background:
+    linear-gradient(var(--shine-bg), var(--shine-bg)) padding-box,
+    conic-gradient(
+        from calc(var(--gradient-angle) - var(--gradient-angle-offset)),
+        transparent,
+        var(--shine-highlight) var(--gradient-percent),
+        var(--gradient-shine) calc(var(--gradient-percent) * 2),
+        var(--shine-highlight) calc(var(--gradient-percent) * 3),
+        transparent calc(var(--gradient-percent) * 4)
+      )
+      border-box;
+  box-shadow: inset 0 0 0 1px var(--shine-bg-subtle);
+  color: var(--shine-fg);
+
+  &::before,
+  &::after,
+  span::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset-inline-start: 50%;
+    inset-block-start: 50%;
+    translate: -50% -50%;
+    z-index: -1;
+  }
+
+  &:active {
+    translate: 0 1px;
+  }
+}
+
+/* Inner shimmer */
+.shine::after {
+  --animation: shimmer linear infinite;
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(
+    -50deg,
+    transparent,
+    var(--shine-highlight),
+    transparent
+  );
+  mask-image: radial-gradient(circle at bottom, transparent 40%, black);
+  opacity: 0.2;
+}
+
+.shine span {
+  z-index: 1;
+
+  &::before {
+    --size: calc(100% + 1rem);
+    width: var(--size);
+    height: var(--size);
+    box-shadow: inset 0 -1ex 2rem 4px var(--shine-highlight);
+    opacity: 0;
+  }
+}
+
+/* SHINY BUTTON */
+/* Animate */
+.shine {
+  --transition: 800ms cubic-bezier(0.25, 1, 0.5, 1);
+  transition: var(--transition);
+  transition-property: --gradient-angle-offset, --gradient-percent,
+    --gradient-shine;
+
+  &,
+  &::before,
+  &::after {
+    animation:
+      var(--animation) var(--duration),
+      var(--animation) calc(var(--duration) / 0.4) reverse paused;
+    animation-composition: add;
+  }
+
+  span::before {
+    transition: opacity var(--transition);
+    animation: calc(var(--duration) * 1.5) breathe linear infinite;
+  }
+}
+
+.shine:is(:hover, :focus-visible) {
+  --gradient-percent: 20%;
+  --gradient-angle-offset: 95deg;
+  --gradient-shine: var(--shine-highlight-subtle);
+
+  &,
+  &::before,
+  &::after {
+    animation-play-state: running;
+  }
+
+  span::before {
+    opacity: 1;
+  }
+}
+
+@keyframes gradient-angle {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.shine {
+  padding: 0.75em;
+  font-size: 1em;
+  width: 100%;
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Update the variables for dark mode */
+    --button-bg-color: #333333;
+    --button-text-color: #ffffff;
+    --background-gradient-end: hsl(0, 0%, var(--dm-background-l));
+    --background-gradient-mid: hsl(0, 0%, calc(var(--dm-background-l) + 5%));
+    --background-gradient-start: hsl(0, 0%, calc(var(--dm-background-l) + 10%));
+    --chat-transcript-bg-end: hsl(0, 0%, var(--dm-background-l));
+    --chat-transcript-bg-start: hsl(0, 0%, calc(var(--dm-background-l) + 5%));
+    --divi-dark-purp: hsl(238.29deg 15.3% 73.81%);
+    --divi-purp: hsl(0, 0%, calc(var(--dm-scheme-main-l) + 10%));
+    --main-header-gradient-end: hsl(0, 0%, var(--dm-background-l));
+    --main-header-gradient-mid: hsl(0, 0%, calc(var(--dm-background-l) + 5%));
+    --main-header-gradient-start: hsl(
+      0,
+      0%,
+      calc(var(--dm-background-l) + 10%)
+    );
+    --text-color: hsl(0, 0%, var(--dm-text-l));
+    --border-color: hsl(0, 0%, var(--dm-border-l));
+    --text-weak-color: hsl(0, 0%, var(--dm-text-weak-l));
+    --text-strong-color: hsl(0, 0%, var(--dm-text-strong-l));
+    --response-chat-card-bg: #000;
+    --white-black: linear-gradient(0deg, black, #1c172aff);
+
+    /* SHINY BUTTON */
+    .shine {
+      --shine-fg: #fff;
+      /* DIVINCI COLORS */
+      --shine-bg: #191725;
+      --shine-bg-subtle: #1c134d;
+      --shine-highlight: #574d8d;
+      --shine-highlight-subtle: #5742e0;
+    }
+
+    @property --gradient-shine {
+      syntax: "<color>";
+      initial-value: rgb(255, 255, 255);
+      inherits: false;
+    }
+  }
+}

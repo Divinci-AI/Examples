@@ -1,0 +1,17 @@
+{
+  "name": "@divinci-ai/static-test-site",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Simple example of embedding Divinci chat on a static site",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "http-server ./public -p $EXAMPLE_STATIC_PORT -c-1",
+    "clean": "echo 'No build artifacts to clean'"
+  },
+  "author": "Sam Tobia",
+  "license": "JSON",
+  "dependencies": {},
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
