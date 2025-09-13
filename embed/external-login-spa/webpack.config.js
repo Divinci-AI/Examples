@@ -5,7 +5,7 @@ module.exports = {
   entry: "./src/index.js",
   output: {
     path: path.resolve(__dirname, "public"),
-    filename: "app.js",
+    filename: "app.hidden.js",
   },
   module: {
     rules: [
