@@ -61,7 +61,7 @@ async function getDivinciJWT(userId, username, picture){
 
 ## Step 4: Full Page Chat
 > If you'd like control over the size and location of the chat (like a full page chat), you will need to do a bit more work
-> See: workspace/clients/embed/example-sites/external-login-ssr/views/full-page-app.ejs
+> See: external-login-ssr/views/full-page-app.ejs
 
 1. Add the script with no information (No release nor divinci-external-user)
 ```html
