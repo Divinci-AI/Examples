@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 module.exports = {
-  port: process.env.EXAMPLE_SSR_PORT,
+  port: process.env.EXAMPLE_SSR_PORT || 8083,
   sessionSecret: "ssr-test-secret",
   divinci: {
     embedScriptUrl: "http://localhost:8081/embed-script.js",

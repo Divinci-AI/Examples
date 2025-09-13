@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 module.exports = {
-  port: process.env.EXAMPLE_SPA_PORT,
+  port: process.env.EXAMPLE_SPA_PORT || 8084,
   sessionSecret: "spa-test-secret",
   divinci: {
     embedScriptUrl: "http://localhost:8081/embed-script.js",
