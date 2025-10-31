@@ -7,7 +7,25 @@ export interface Env {
 	EMBED_SCRIPT_URL: string;
 	RELEASE_ID: string;
 	ENVIRONMENT: string;
+	ALLOWED_ORIGINS?: string; // Comma-separated list of allowed origins for CORS
 }
+
+// Security utilities
+const SECURITY = {
+	// Get CORS headers
+	getCORSHeaders(origin: string | null, allowedOrigins: string[]): Record<string, string> {
+		const headers: Record<string, string> = {};
+
+		if (origin && (allowedOrigins.includes("*") || allowedOrigins.includes(origin))) {
+			headers["Access-Control-Allow-Origin"] = origin;
+			headers["Access-Control-Allow-Methods"] = "GET, OPTIONS";
+			headers["Access-Control-Allow-Headers"] = "Content-Type";
+			headers["Access-Control-Max-Age"] = "86400";
+		}
+
+		return headers;
+	}
+};
 
 const HTML_TEMPLATE = `<!doctype html>
 <html lang="en">
@@ -15,6 +33,8 @@ const HTML_TEMPLATE = `<!doctype html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Divinci Static Example - Simple Embed</title>
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <link rel="stylesheet" href="/styles.css">
 
     <!-- Divinci Chat Embed - Simplest Integration -->
@@ -303,12 +323,38 @@ export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
 
+		// CORS preflight handling
+		if (request.method === "OPTIONS") {
+			const allowedOrigins = env.ALLOWED_ORIGINS?.split(",") || ["*"];
+			const origin = request.headers.get("Origin");
+			const corsHeaders = SECURITY.getCORSHeaders(origin, allowedOrigins);
+
+			return new Response(null, {
+				status: 204,
+				headers: corsHeaders
+			});
+		}
+
+		// Get CORS headers for actual requests
+		const allowedOrigins = env.ALLOWED_ORIGINS?.split(",") || ["*"];
+		const origin = request.headers.get("Origin");
+		const corsHeaders = SECURITY.getCORSHeaders(origin, allowedOrigins);
+
+		// Security headers for all responses
+		const securityHeaders = {
+			"X-Content-Type-Options": "nosniff",
+			"X-Frame-Options": "SAMEORIGIN",
+			"Referrer-Policy": "strict-origin-when-cross-origin",
+			...corsHeaders
+		};
+
 		// Handle CSS request
 		if (url.pathname === "/styles.css") {
 			return new Response(CSS_STYLES, {
 				headers: {
 					"Content-Type": "text/css",
-					"Cache-Control": "public, max-age=3600"
+					"Cache-Control": "public, max-age=3600",
+					...securityHeaders
 				}
 			});
 		}
@@ -323,12 +369,16 @@ export default {
 			return new Response(html, {
 				headers: {
 					"Content-Type": "text/html;charset=UTF-8",
-					"Cache-Control": "public, max-age=300"
+					"Cache-Control": "public, max-age=300",
+					...securityHeaders
 				}
 			});
 		}
 
 		// 404 for other paths
-		return new Response("Not Found", { status: 404 });
+		return new Response("Not Found", {
+			status: 404,
+			headers: securityHeaders
+		});
 	}
 };

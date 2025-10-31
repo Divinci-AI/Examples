@@ -22,6 +22,9 @@ EMBED_SCRIPT_URL = "https://embed.staging.dev.divinci.app/embed-script.js"
 DIVINCI_API_URL = "https://api.staging.dev.divinci.app"
 RELEASE_ID = "demo-release-staging"
 ENVIRONMENT = "staging"
+# Security configuration
+ALLOWED_ORIGINS = "*"  # For production, set to specific domains: "https://yoursite.com,https://www.yoursite.com"
+RATE_LIMIT_PER_MINUTE = "60"  # Max requests per IP per minute
 
 # KV for session storage
 [[kv_namespaces]]

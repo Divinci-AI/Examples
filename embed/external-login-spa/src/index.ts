@@ -11,7 +11,65 @@ export interface Env {
 	RELEASE_ID: string;
 	ENVIRONMENT: string;
 	SESSIONS: KVNamespace;
+	ALLOWED_ORIGINS?: string; // Comma-separated list of allowed origins for CORS
+	RATE_LIMIT_PER_MINUTE?: string; // Max requests per IP per minute
 }
+
+// Security utilities
+const SECURITY = {
+	// Sanitize string input to prevent XSS
+	sanitizeString(input: string, maxLength = 1000): string {
+		return input
+			.trim()
+			.slice(0, maxLength)
+			.replace(/[<>'"]/g, (char) => {
+				const entities: Record<string, string> = {
+					"<": "&lt;",
+					">": "&gt;",
+					"'": "&#x27;",
+					'"': "&quot;"
+				};
+				return entities[char] || char;
+			});
+	},
+
+	// Validate username format
+	validateUsername(username: string): boolean {
+		return /^[a-zA-Z0-9_-]{3,20}$/.test(username);
+	},
+
+	// Simple rate limiting using KV
+	async checkRateLimit(
+		kv: KVNamespace,
+		ip: string,
+		limit: number
+	): Promise<boolean> {
+		const key = `ratelimit:${ip}`;
+		const current = await kv.get(key);
+		const count = current ? parseInt(current) : 0;
+
+		if (count >= limit) {
+			return false;
+		}
+
+		await kv.put(key, (count + 1).toString(), { expirationTtl: 60 });
+		return true;
+	},
+
+	// Get CORS headers
+	getCORSHeaders(origin: string | null, allowedOrigins: string[]): Record<string, string> {
+		const headers: Record<string, string> = {};
+
+		if (origin && (allowedOrigins.includes("*") || allowedOrigins.includes(origin))) {
+			headers["Access-Control-Allow-Origin"] = origin;
+			headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
+			headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+			headers["Access-Control-Max-Age"] = "86400";
+		}
+
+		return headers;
+	}
+};
 
 interface User {
 	id: string;
@@ -53,14 +111,50 @@ export default {
 		const url = new URL(request.url);
 		const path = url.pathname;
 
-		// CORS handling
+		// Get CORS configuration
+		const allowedOrigins = env.ALLOWED_ORIGINS?.split(",") || ["*"];
+		const origin = request.headers.get("Origin");
+		const corsHeaders = SECURITY.getCORSHeaders(origin, allowedOrigins);
+
+		// CORS preflight handling
 		if (request.method === "OPTIONS") {
-			return handleCORS();
+			return new Response(null, {
+				status: 204,
+				headers: corsHeaders
+			});
 		}
+
+		// Rate limiting (skip for static assets)
+		if (!path.startsWith("/style.css") && !path.startsWith("/app.js")) {
+			const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
+			const rateLimit = parseInt(env.RATE_LIMIT_PER_MINUTE || "60");
+
+			if (!(await SECURITY.checkRateLimit(env.SESSIONS, clientIP, rateLimit))) {
+				return new Response(
+					JSON.stringify({ error: "Too many requests. Please try again later." }),
+					{
+						status: 429,
+						headers: {
+							"Retry-After": "60",
+							"Content-Type": "application/json",
+							...corsHeaders
+						}
+					}
+				);
+			}
+		}
+
+		// Security headers for all responses
+		const securityHeaders = {
+			"X-Content-Type-Options": "nosniff",
+			"X-Frame-Options": "SAMEORIGIN",
+			"Referrer-Policy": "strict-origin-when-cross-origin",
+			...corsHeaders
+		};
 
 		// API routes
 		if (path.startsWith("/api/")) {
-			return handleAPI(request, env, path);
+			return handleAPI(request, env, path, securityHeaders);
 		}
 
 		// Static assets
@@ -68,7 +162,8 @@ export default {
 			return new Response(SPA_JS, {
 				headers: {
 					"Content-Type": "application/javascript",
-					"Cache-Control": "public, max-age=3600"
+					"Cache-Control": "public, max-age=3600",
+					...securityHeaders
 				}
 			});
 		}
@@ -77,43 +172,67 @@ export default {
 			return new Response(SPA_CSS, {
 				headers: {
 					"Content-Type": "text/css",
-					"Cache-Control": "public, max-age=3600"
+					"Cache-Control": "public, max-age=3600",
+					...securityHeaders
 				}
 			});
 		}
 
 		// SPA fallback - serve index.html for all other routes
 		return new Response(renderIndexHTML(env), {
-			headers: { "Content-Type": "text/html;charset=UTF-8" }
+			headers: {
+				"Content-Type": "text/html;charset=UTF-8",
+				...securityHeaders
+			}
 		});
 	}
 };
 
-function handleCORS(): Response {
-	return new Response(null, {
-		headers: {
-			"Access-Control-Allow-Origin": "*",
-			"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type, Authorization"
-		}
-	});
-}
-
-async function handleAPI(request: Request, env: Env, path: string): Promise<Response> {
-	const corsHeaders = {
-		"Access-Control-Allow-Origin": "*",
+async function handleAPI(
+	request: Request,
+	env: Env,
+	path: string,
+	securityHeaders: Record<string, string>
+): Promise<Response> {
+	const responseHeaders = {
+		...securityHeaders,
 		"Content-Type": "application/json"
 	};
 
 	// Login endpoint
 	if (path === "/api/auth/login" && request.method === "POST") {
-		const { username, password } = await request.json() as { username: string; password: string };
+		const { username: rawUsername, password: rawPassword } = await request.json() as { username: string; password: string };
 
-		const user = MOCK_USERS[username];
-		if (!user || user.password !== password) {
+		// Input validation
+		if (!rawUsername || !rawPassword) {
+			return new Response(
+				JSON.stringify({ error: "Username and password are required" }),
+				{ status: 400, headers: responseHeaders }
+			);
+		}
+
+		// Sanitize and validate username
+		const username = SECURITY.sanitizeString(rawUsername, 20);
+		if (!SECURITY.validateUsername(username)) {
+			return new Response(
+				JSON.stringify({ error: "Invalid username format" }),
+				{ status: 400, headers: responseHeaders }
+			);
+		}
+
+		// Password length validation (don't sanitize passwords)
+		if (rawPassword.length < 6 || rawPassword.length > 100) {
 			return new Response(
 				JSON.stringify({ error: "Invalid credentials" }),
-				{ status: 401, headers: corsHeaders }
+				{ status: 401, headers: responseHeaders }
+			);
+		}
+
+		const user = MOCK_USERS[username];
+		if (!user || user.password !== rawPassword) {
+			return new Response(
+				JSON.stringify({ error: "Invalid credentials" }),
+				{ status: 401, headers: responseHeaders }
 			);
 		}
 
@@ -129,7 +248,7 @@ async function handleAPI(request: Request, env: Env, path: string): Promise<Resp
 				token,
 				user: { username, name: user.name, picture: user.picture }
 			}),
-			{ headers: corsHeaders }
+			{ headers: responseHeaders }
 		);
 	}
 
@@ -139,7 +258,7 @@ async function handleAPI(request: Request, env: Env, path: string): Promise<Resp
 		if (!authHeader || !authHeader.startsWith("Bearer ")) {
 			return new Response(
 				JSON.stringify({ error: "Unauthorized" }),
-				{ status: 401, headers: corsHeaders }
+				{ status: 401, headers: responseHeaders }
 			);
 		}
 
@@ -149,13 +268,13 @@ async function handleAPI(request: Request, env: Env, path: string): Promise<Resp
 		if (!user) {
 			return new Response(
 				JSON.stringify({ error: "Invalid token" }),
-				{ status: 401, headers: corsHeaders }
+				{ status: 401, headers: responseHeaders }
 			);
 		}
 
 		return new Response(
 			JSON.stringify({ user }),
-			{ headers: corsHeaders }
+			{ headers: responseHeaders }
 		);
 	}
 
@@ -165,7 +284,7 @@ async function handleAPI(request: Request, env: Env, path: string): Promise<Resp
 		if (!authHeader || !authHeader.startsWith("Bearer ")) {
 			return new Response(
 				JSON.stringify({ error: "Unauthorized" }),
-				{ status: 401, headers: corsHeaders }
+				{ status: 401, headers: responseHeaders }
 			);
 		}
 
@@ -175,7 +294,7 @@ async function handleAPI(request: Request, env: Env, path: string): Promise<Resp
 		if (!user) {
 			return new Response(
 				JSON.stringify({ error: "Invalid token" }),
-				{ status: 401, headers: corsHeaders }
+				{ status: 401, headers: responseHeaders }
 			);
 		}
 
@@ -198,20 +317,20 @@ async function handleAPI(request: Request, env: Env, path: string): Promise<Resp
 			const data = await response.json() as { refreshToken: string };
 			return new Response(
 				JSON.stringify({ token: data.refreshToken }),
-				{ headers: corsHeaders }
+				{ headers: responseHeaders }
 			);
 		} catch (error) {
 			console.error("Failed to get Divinci JWT:", error);
 			return new Response(
 				JSON.stringify({ error: "Failed to get JWT" }),
-				{ status: 500, headers: corsHeaders }
+				{ status: 500, headers: responseHeaders }
 			);
 		}
 	}
 
 	return new Response(
 		JSON.stringify({ error: "Not found" }),
-		{ status: 404, headers: corsHeaders }
+		{ status: 404, headers: responseHeaders }
 	);
 }
 

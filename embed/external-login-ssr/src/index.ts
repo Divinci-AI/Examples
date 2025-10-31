@@ -10,7 +10,65 @@ export interface Env {
 	RELEASE_ID: string;
 	ENVIRONMENT: string;
 	SESSIONS: KVNamespace;
+	ALLOWED_ORIGINS?: string; // Comma-separated list of allowed origins for CORS
+	RATE_LIMIT_PER_MINUTE?: string; // Max requests per IP per minute
 }
+
+// Security utilities
+const SECURITY = {
+	// Sanitize string input to prevent XSS
+	sanitizeString(input: string, maxLength = 1000): string {
+		return input
+			.trim()
+			.slice(0, maxLength)
+			.replace(/[<>'"]/g, (char) => {
+				const entities: Record<string, string> = {
+					"<": "&lt;",
+					">": "&gt;",
+					"'": "&#x27;",
+					'"': "&quot;"
+				};
+				return entities[char] || char;
+			});
+	},
+
+	// Validate username format
+	validateUsername(username: string): boolean {
+		return /^[a-zA-Z0-9_-]{3,20}$/.test(username);
+	},
+
+	// Simple rate limiting using KV
+	async checkRateLimit(
+		kv: KVNamespace,
+		ip: string,
+		limit: number
+	): Promise<boolean> {
+		const key = `ratelimit:${ip}`;
+		const current = await kv.get(key);
+		const count = current ? parseInt(current) : 0;
+
+		if (count >= limit) {
+			return false;
+		}
+
+		await kv.put(key, (count + 1).toString(), { expirationTtl: 60 });
+		return true;
+	},
+
+	// Get CORS headers
+	getCORSHeaders(origin: string | null, allowedOrigins: string[]): Record<string, string> {
+		const headers: Record<string, string> = {};
+
+		if (origin && (allowedOrigins.includes("*") || allowedOrigins.includes(origin))) {
+			headers["Access-Control-Allow-Origin"] = origin;
+			headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
+			headers["Access-Control-Allow-Headers"] = "Content-Type";
+			headers["Access-Control-Max-Age"] = "86400";
+		}
+
+		return headers;
+	}
+};
 
 interface User {
 	id: string;
@@ -51,9 +109,40 @@ export default {
 		const url = new URL(request.url);
 		const path = url.pathname;
 
+		// CORS preflight handling
+		if (request.method === "OPTIONS") {
+			const allowedOrigins = env.ALLOWED_ORIGINS?.split(",") || ["*"];
+			const origin = request.headers.get("Origin");
+			const corsHeaders = SECURITY.getCORSHeaders(origin, allowedOrigins);
+
+			return new Response(null, {
+				status: 204,
+				headers: corsHeaders
+			});
+		}
+
+		// Rate limiting
+		const clientIP = request.headers.get("CF-Connecting-IP") || "unknown";
+		const rateLimit = parseInt(env.RATE_LIMIT_PER_MINUTE || "60");
+
+		if (!(await SECURITY.checkRateLimit(env.SESSIONS, clientIP, rateLimit))) {
+			return new Response("Too many requests. Please try again later.", {
+				status: 429,
+				headers: {
+					"Retry-After": "60",
+					"Content-Type": "text/plain"
+				}
+			});
+		}
+
 		// Get session
 		const sessionId = getSessionCookie(request);
 		const session = sessionId ? await getSession(env.SESSIONS, sessionId) : null;
+
+		// CORS headers for actual requests
+		const allowedOrigins = env.ALLOWED_ORIGINS?.split(",") || ["*"];
+		const origin = request.headers.get("Origin");
+		const corsHeaders = SECURITY.getCORSHeaders(origin, allowedOrigins);
 
 		// Routes
 		if (path === "/" || path === "") {
@@ -89,10 +178,13 @@ export default {
 			if (!session) {
 				return new Response(JSON.stringify({ error: "Unauthorized" }), {
 					status: 401,
-					headers: { "Content-Type": "application/json" }
+					headers: {
+						"Content-Type": "application/json",
+						...corsHeaders
+					}
 				});
 			}
-			return getDivinciJWT(env, session);
+			return getDivinciJWT(env, session, corsHeaders);
 		}
 
 		if (path === "/styles.css") {
@@ -153,11 +245,42 @@ async function destroySession(kv: KVNamespace, sessionId: string | null): Promis
 // Authentication handlers
 async function handleLogin(request: Request, env: Env): Promise<Response> {
 	const formData = await request.formData();
-	const username = formData.get("username") as string;
-	const password = formData.get("password") as string;
+	const rawUsername = formData.get("username") as string;
+	const rawPassword = formData.get("password") as string;
+
+	// Input validation
+	if (!rawUsername || !rawPassword) {
+		return new Response(
+			renderLoginPage(env, null, "Username and password are required"),
+			{
+				headers: { "Content-Type": "text/html;charset=UTF-8" }
+			}
+		);
+	}
+
+	// Sanitize and validate username
+	const username = SECURITY.sanitizeString(rawUsername, 20);
+	if (!SECURITY.validateUsername(username)) {
+		return new Response(
+			renderLoginPage(env, null, "Invalid username format"),
+			{
+				headers: { "Content-Type": "text/html;charset=UTF-8" }
+			}
+		);
+	}
+
+	// Password length validation (don't sanitize passwords)
+	if (rawPassword.length < 6 || rawPassword.length > 100) {
+		return new Response(
+			renderLoginPage(env, null, "Invalid credentials"),
+			{
+				headers: { "Content-Type": "text/html;charset=UTF-8" }
+			}
+		);
+	}
 
 	const user = MOCK_USERS[username];
-	if (!user || user.password !== password) {
+	if (!user || user.password !== rawPassword) {
 		return new Response(
 			renderLoginPage(env, null, "Invalid username or password"),
 			{
@@ -199,7 +322,11 @@ async function handleLogout(
 }
 
 // Divinci JWT trading
-async function getDivinciJWT(env: Env, session: Session): Promise<Response> {
+async function getDivinciJWT(
+	env: Env,
+	session: Session,
+	corsHeaders: Record<string, string>
+): Promise<Response> {
 	try {
 		const response = await fetch(`${env.DIVINCI_API_URL}/embed/login`, {
 			method: "POST",
@@ -220,7 +347,10 @@ async function getDivinciJWT(env: Env, session: Session): Promise<Response> {
 
 		const data = await response.json() as { refreshToken: string };
 		return new Response(JSON.stringify({ token: data.refreshToken }), {
-			headers: { "Content-Type": "application/json" }
+			headers: {
+				"Content-Type": "application/json",
+				...corsHeaders
+			}
 		});
 	} catch (error) {
 		console.error("Failed to get Divinci JWT:", error);
@@ -228,7 +358,10 @@ async function getDivinciJWT(env: Env, session: Session): Promise<Response> {
 			JSON.stringify({ error: "Failed to get JWT" }),
 			{
 				status: 500,
-				headers: { "Content-Type": "application/json" }
+				headers: {
+					"Content-Type": "application/json",
+					...corsHeaders
+				}
 			}
 		);
 	}
@@ -248,7 +381,7 @@ function renderHomePage(env: Env, session: Session | null): Response {
 				session
 					? `
 				<div class="info-box">
-					<p>Hello, <strong>${session.name}</strong>! You are logged in.</p>
+					<p>Hello, <strong>${SECURITY.sanitizeString(session.name, 50)}</strong>! You are logged in.</p>
 					<p>This demo shows how to integrate Divinci chat with external authentication in a Server-Side Rendered application.</p>
 				</div>
 			`
@@ -419,7 +552,7 @@ function renderProtectedPage(env: Env, session: Session): Response {
 		<div class="page">
 			<h1>Protected Page</h1>
 			<div class="alert alert-success">
-				<strong>Welcome, ${session.name}!</strong> This page requires authentication.
+				<strong>Welcome, ${SECURITY.sanitizeString(session.name, 50)}!</strong> This page requires authentication.
 			</div>
 
 			<div class="info-box">
@@ -466,12 +599,18 @@ function renderLayout(
 	title: string,
 	content: string
 ): string {
+	// Sanitize title to prevent XSS
+	const safeTitle = SECURITY.sanitizeString(title, 100);
+
 	return `<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>${title} - Divinci SSR Demo</title>
+		<title>${safeTitle} - Divinci SSR Demo</title>
+		<meta http-equiv="X-Content-Type-Options" content="nosniff">
+		<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+		<meta http-equiv="Content-Security-Policy" content="default-src 'self' ${env.EMBED_SCRIPT_URL.replace(/\/[^\/]*$/, '')} ${env.DIVINCI_API_URL}; script-src 'self' 'unsafe-inline' ${env.EMBED_SCRIPT_URL.replace(/\/[^\/]*$/, '')}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' ${env.DIVINCI_API_URL};">
 		<link rel="stylesheet" href="/styles.css">
 	</head>
 	<body>
@@ -486,7 +625,7 @@ function renderLayout(
 						session
 							? `
 						<div class="user-menu">
-							<span>${session.name}</span>
+							<span>${SECURITY.sanitizeString(session.name, 50)}</span>
 							<a href="/logout" class="btn-logout">Logout</a>
 						</div>
 					`

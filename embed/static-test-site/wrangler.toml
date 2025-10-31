@@ -21,6 +21,8 @@ ENVIRONMENT = "develop"
 EMBED_SCRIPT_URL = "https://embed.staging.dev.divinci.app/embed-script.js"
 RELEASE_ID = "demo-release-staging"
 ENVIRONMENT = "staging"
+# Security configuration
+ALLOWED_ORIGINS = "*"  # For production, set to specific domains: "https://yoursite.com,https://www.yoursite.com"
 
 [placement]
 mode = "smart"
