@@ -1,0 +1,26 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "whitelabel-static-example"
+main = "src/index.ts"
+compatibility_date = "2024-05-24"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+EMBED_SCRIPT_URL = "https://embed.divinci.ai/embed-script.js"
+RELEASE_ID = "68ba12461824e890fb12512f"
+ENVIRONMENT = "production"
+
+[env.dev]
+EMBED_SCRIPT_URL = "http://localhost:8081/embed-script.js"
+RELEASE_ID = "your-dev-release-id"
+ENVIRONMENT = "develop"
+
+[env.staging.vars]
+EMBED_SCRIPT_URL = "https://embed.staging.dev.divinci.app/embed-script.js"
+RELEASE_ID = "demo-release-staging"
+ENVIRONMENT = "staging"
+
+[placement]
+mode = "smart"

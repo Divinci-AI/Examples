@@ -1,0 +1,40 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "whitelabel-ssr-demo"
+main = "src/index.ts"
+compatibility_date = "2024-05-24"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+EMBED_SCRIPT_URL = "https://embed.divinci.ai/embed-script.js"
+DIVINCI_API_URL = "https://api.divinci.ai"
+ENVIRONMENT = "production"
+
+[env.dev]
+EMBED_SCRIPT_URL = "http://localhost:8081/embed-script.js"
+DIVINCI_API_URL = "http://localhost:3000"
+ENVIRONMENT = "develop"
+
+[env.staging.vars]
+EMBED_SCRIPT_URL = "https://embed.staging.dev.divinci.app/embed-script.js"
+DIVINCI_API_URL = "https://api.staging.dev.divinci.app"
+RELEASE_ID = "demo-release-staging"
+ENVIRONMENT = "staging"
+
+# KV for session storage
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "your-production-kv-id"
+
+[[env.dev.kv_namespaces]]
+binding = "SESSIONS"
+id = "your-dev-kv-id"
+
+[[env.staging.kv_namespaces]]
+binding = "SESSIONS"
+id = "fd253657e0de435f949bdbcbd7d4ebf2"
+
+[placement]
+mode = "smart"
