@@ -499,9 +499,9 @@ class App {
 				<div class="deploy-section">
 					<h3>🚀 Deploy Your Own</h3>
 					<p>Deploy this SPA example to Cloudflare Workers:</p>
-					<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/Divinci-AI/Examples/tree/main/embed/external-login-spa" class="deploy-button" target="_blank">
-						Deploy to Cloudflare Workers
-					</a>
+					<p>
+						<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/Divinci-AI/Examples/tree/main/embed/external-login-spa"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers"/></a>
+					</p>
 					<p class="deploy-note">
 						Requires Cloudflare account and Divinci API credentials.
 						See <a href="https://github.com/Divinci-AI/Examples/blob/main/embed/HowToEmbed.md" target="_blank">documentation</a> for setup.
@@ -798,24 +798,9 @@ li {
 	margin-bottom: 15px;
 }
 
-.deploy-button {
+.deploy-section img {
 	display: inline-block;
-	background: #f6821f;
-	color: white;
-	padding: 12px 24px;
-	border-radius: 4px;
-	text-decoration: none;
-	font-weight: 600;
-	font-size: 1rem;
-	margin: 20px 0;
-	border: none;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	transition: background 0.2s;
-}
-
-.deploy-button:hover {
-	background: #e36f14;
-	text-decoration: none;
+	margin: 10px 0;
 }
 
 .deploy-note {
@@ -825,7 +810,7 @@ li {
 }
 
 .deploy-note a {
-	color: #f6821f;
+	color: #667eea;
 	text-decoration: underline;
 }
 
