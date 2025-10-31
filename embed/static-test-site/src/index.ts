@@ -92,7 +92,10 @@ const HTML_TEMPLATE = `<!doctype html>
             <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/Divinci-AI/Examples/tree/main/embed/static-test-site"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers"/></a>
           </p>
           <p class="deploy-note">
-            You'll need a Cloudflare account (free tier works!) and your Divinci Release ID.
+            <strong>Don't have a Divinci account yet?</strong> <a href="https://divinci.app" target="_blank" rel="noopener noreferrer">Sign up for free</a> to create your AI and get your Release ID.
+          </p>
+          <p class="deploy-note">
+            You'll also need a Cloudflare account (free tier works!).
             See <a href="https://github.com/Divinci-AI/Examples/blob/main/embed/HowToEmbed.md" target="_blank">documentation</a> for setup instructions.
           </p>
         </section>

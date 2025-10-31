@@ -409,7 +409,10 @@ function renderHomePage(env: Env, session: Session | null): Response {
 					<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/Divinci-AI/Examples/tree/main/embed/external-login-ssr"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers"/></a>
 				</p>
 				<p class="deploy-note">
-					Requires Cloudflare account and Divinci API credentials.
+					<strong>Don't have a Divinci account yet?</strong> <a href="https://divinci.app" target="_blank" rel="noopener noreferrer">Sign up for free</a> to create your AI and get your API credentials.
+				</p>
+				<p class="deploy-note">
+					Requires Cloudflare account (free tier works!).
 					See <a href="https://github.com/Divinci-AI/Examples/blob/main/embed/HowToEmbed.md" target="_blank">documentation</a> for setup.
 				</p>
 			</div>
