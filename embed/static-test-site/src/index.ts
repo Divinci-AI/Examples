@@ -41,7 +41,6 @@ const HTML_TEMPLATE = `<!doctype html>
     <script
       src="{{EMBED_SCRIPT_URL}}"
       divinci-release="{{RELEASE_ID}}"
-      divinci-external-user
     ></script>
   </head>
   <body>
@@ -65,7 +64,6 @@ const HTML_TEMPLATE = `<!doctype html>
           <pre><code>&lt;script
   src="{{EMBED_SCRIPT_URL}}"
   divinci-release="{{RELEASE_ID}}"
-  divinci-external-user
 &gt;&lt;/script&gt;</code></pre>
 
           <div class="features">
@@ -73,19 +71,18 @@ const HTML_TEMPLATE = `<!doctype html>
             <ul>
               <li>✅ Zero configuration required</li>
               <li>✅ Auto-embed on page load</li>
-              <li>✅ External user authentication ready</li>
+              <li>✅ Built-in authentication</li>
               <li>✅ Fully responsive</li>
             </ul>
           </div>
         </section>
 
         <section class="info-box info-note">
-          <h3>📝 Note about External Users</h3>
+          <h3>📝 Note about Authentication</h3>
           <p>
-            The <code>divinci-external-user</code> attribute tells the chat that you'll handle
-            user authentication. When a user token is available, update the attribute:
+            This static example uses Divinci's built-in authentication. For server-side
+            authentication with your own user system, see the SSR and SPA examples below.
           </p>
-          <pre><code>divinci-external-user="USER_TOKEN_HERE"</code></pre>
         </section>
 
         <section class="deploy-section">
