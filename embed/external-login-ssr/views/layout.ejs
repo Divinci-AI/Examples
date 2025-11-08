@@ -10,7 +10,7 @@
   <% if(divinciUserToken || divinciEmbed.displayLoggedOutChat) { %>
     <script
       src="<%- escapeHTMLAttribute(divinciEmbed.embedScriptUrl) %>"
-      divinci-release="<%- escapeHTMLAttribute(divinciEmbed.releaseId) %>"
+      divinci-release-id="<%- escapeHTMLAttribute(divinciEmbed.releaseId) %>"
       <% if(divinciUserToken){ %>
       divinci-external-user="<%- escapeHTMLAttribute(divinciUserToken) %>"
       <% } else if(divinciEmbed.displayLoggedOutChat) { %>

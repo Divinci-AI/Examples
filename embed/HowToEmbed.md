@@ -38,11 +38,11 @@ async function getDivinciJWT(userId, username, picture){
 
 ## Step 3: Auto Embedding the chat
 > This is the simplest way to embed the chat
-- provide release and userId to the script
+- provide release id and userId to the script
 ```html
 <script
   src="https://embed.divinci.ai/embed-script.js"
-  divinci-release="YOUR_RELEASE_ID_FROM_STEP_1"
+  divinci-release-id="YOUR_RELEASE_ID_FROM_STEP_1"
   divinci-external-user="YOUR_USER_REFRESH_TOKEN_FROM_STEP_2"
 ></script>
 ```
@@ -51,7 +51,7 @@ async function getDivinciJWT(userId, username, picture){
 ```html
 <script
   src="https://embed.divinci.ai/embed-script.js"
-  divinci-release="YOUR_RELEASE_ID_FROM_STEP_1"
+  divinci-release-id="YOUR_RELEASE_ID_FROM_STEP_1"
   divinci-external-user
 ></script>
 ```
@@ -75,9 +75,9 @@ const releaseId = "YOUR_RELEASE_ID_FROM_STEP_1"
 const divinciChat = new DivinciChat({
   releaseId: releaseId,
 
-  // externalLogin: true is required for external users
+  // externalUser: true is required for external users
   // otherwise the user will be controlled by divinci's internalauth
-  externalLogin: true,
+  externalUser: true,
 
   // toggleable: false will prevent the chat from being auto added
   toggleable: false,
