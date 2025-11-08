@@ -75,9 +75,9 @@ const releaseId = "YOUR_RELEASE_ID_FROM_STEP_1"
 const divinciChat = new DivinciChat({
   releaseId: releaseId,
 
-  // externalLogin: true is required for external users
+  // externalUser: true is required for external users
   // otherwise the user will be controlled by divinci's internalauth
-  externalLogin: true,
+  externalUser: true,
 
   // toggleable: false will prevent the chat from being auto added
   toggleable: false,
