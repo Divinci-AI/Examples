@@ -11,6 +11,13 @@ Inside of your workspace
 > In your server, at some point you will need to trade the user information for a JWT token to pass to the client.
 > The username and picture are not as important as the userId
 ```javascript
+type ExpectedLoginBodyType = {
+  apikey: string;
+  userId: number | string; // both will turn into strings so 12345 and "12345" are the same
+  username: string;
+  picture?: string | null; // picture is optional
+}
+
 async function getDivinciJWT(userId, username, picture){
   const response = await fetch(`https://api.divinci.ai/embed/login`, {
     method: "POST",
