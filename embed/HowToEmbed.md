@@ -83,7 +83,7 @@ const divinciChat = new DivinciChat({
   releaseId: releaseId,
 
   // externalUser: true is required for external users
-  // otherwise the user will be controlled by divinci's internalauth
+  // otherwise the user will be controlled by divinci's internal auth
   externalUser: true,
 
   // toggleable: false will prevent the chat from being auto added
