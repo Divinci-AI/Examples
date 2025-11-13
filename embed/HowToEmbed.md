@@ -10,7 +10,7 @@ Inside of your workspace
 ## Step 2: Getting the user token to pass to the client
 > In your server, at some point you will need to trade the user information for a JWT token to pass to the client.
 > The username and picture are not as important as the userId
-```javascript
+```typescript
 type ExpectedLoginBodyType = {
   apikey: string;
   userId: number | string; // both will turn into strings so 12345 and "12345" are the same
