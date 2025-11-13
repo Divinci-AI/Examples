@@ -15,7 +15,7 @@ type ExpectedLoginBodyType = {
   apikey: string;
   userId: number | string; // both will turn into strings so 12345 and "12345" are the same
   username: string;
-  picture?: string | null; // picture is optional
+  picture?: string | null; // picture is optional, must be a valid https url (http will not work as it's not secure)
 }
 
 async function getDivinciJWT(userId, username, picture){
