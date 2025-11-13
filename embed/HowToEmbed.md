@@ -8,9 +8,16 @@ Inside of your workspace
 
 
 ## Step 2: Getting the user token to pass to the client
-> In your server, at some point you will need to trade the user information for a JWT token to pass to the client.
+> In your server, at some point you will need to trade the user information for a JWT to pass to the client.
 > The username and picture are not as important as the userId
-```javascript
+```typescript
+type ExpectedLoginBodyType = {
+  apikey: string;
+  userId: number | string; // both will turn into strings so 12345 and "12345" are the same
+  username: string;
+  picture?: string | null; // picture is optional, must be a valid https url (http will not work as it's not secure)
+}
+
 async function getDivinciJWT(userId, username, picture){
   const response = await fetch(`https://api.divinci.ai/embed/login`, {
     method: "POST",
@@ -76,7 +83,7 @@ const divinciChat = new DivinciChat({
   releaseId: releaseId,
 
   // externalUser: true is required for external users
-  // otherwise the user will be controlled by divinci's internalauth
+  // otherwise the user will be controlled by divinci's internal auth
   externalUser: true,
 
   // toggleable: false will prevent the chat from being auto added
