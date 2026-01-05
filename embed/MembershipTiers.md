@@ -21,7 +21,86 @@ When integrating the Divinci embed client, you can pass a membership tier during
 | `enterprise` | 50,000 | 2,000 | 200 | 500 |
 | `unlimited` | No limit | No limit | No limit | No limit |
 
-## Integration Guide
+---
+
+## Admin Configuration (Divinci Dashboard)
+
+White-label release admins can configure membership tiers directly in the Divinci dashboard when creating or editing an API key.
+
+### Accessing Tier Configuration
+
+1. Navigate to your workspace in [Divinci.app](https://divinci.app)
+2. Go to **White Label** → **API Keys**
+3. Create a new API key or edit an existing one
+4. Scroll to **Embed User Membership Tiers**
+
+### Configuring Allowed Tiers
+
+Select which tiers your integration can grant to users:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Embed User Membership Tiers                             │
+├─────────────────────────────────────────────────────────┤
+│ Allowed Tiers                                           │
+│                                                         │
+│ ☑ Free        50 msg/month, 10/day, 5/hour             │
+│ ☑ Basic       500 msg/month, 50/day, 20/hour           │
+│ ☑ Premium     5,000 msg/month, 200/day, 50/hour        │
+│ ☐ Enterprise  50,000 msg/month, 2,000/day, 200/hour    │
+│ ☐ Unlimited   No limits                                 │
+│                                                         │
+│ ▸ Advanced: Custom Tier Limits                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Customizing Tier Limits
+
+Click **Advanced: Custom Tier Limits** to override default quotas for any tier:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Customize Premium Tier Limits                           │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ Messages per Month          Messages per Day            │
+│ ┌─────────────────────┐     ┌─────────────────────┐    │
+│ │ 10000         [Modified]  │ 500                 │    │
+│ └─────────────────────┘     └─────────────────────┘    │
+│ Default: 5,000              Default: 200                │
+│                                                         │
+│ Messages per Hour           Max Conversation Length     │
+│ ┌─────────────────────┐     ┌─────────────────────┐    │
+│ │ 100                 │     │ 150                 │    │
+│ └─────────────────────┘     └─────────────────────┘    │
+│ Default: 50                 Default: 100                │
+│                                                         │
+│ [Save Changes]  [Reset to Default]                      │
+│                                                         │
+│ ℹ Use -1 for unlimited. Changes apply when saved.      │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key Points:**
+- Only modify the fields you want to customize
+- Use `-1` to make any limit unlimited
+- Click **Reset to Default** to remove customizations
+- Changes take effect when the API key is saved
+
+### Example: SaaS Pricing Model
+
+Map your SaaS subscription plans to Divinci tiers:
+
+| Your Plan | Divinci Tier | Custom Limits |
+|-----------|--------------|---------------|
+| Starter | `free` | 100 msg/month (doubled) |
+| Pro | `basic` | Default limits |
+| Business | `premium` | 10,000 msg/month, 500/day |
+| Enterprise | `enterprise` | Default limits |
+
+---
+
+## Developer Integration
 
 ### 1. Configure Allowed Tiers (API Key Setup)
 
@@ -96,6 +175,8 @@ If a user requests a tier not in your API key's `allowedTiers`, they are automat
 | `premium` | `["free", "basic"]` | `basic` |
 | `unlimited` | `["free"]` | `free` |
 
+---
+
 ## Response Format
 
 ### Successful Login Response
@@ -112,10 +193,10 @@ If a user requests a tier not in your API key's `allowedTiers`, they are automat
   "tierConfig": {
     "tier": "premium",
     "limits": {
-      "messagesPerMonth": 5000,
-      "messagesPerDay": 200,
-      "messagesPerHour": 50,
-      "maxConversationLength": 100
+      "messagesPerMonth": 10000,
+      "messagesPerDay": 500,
+      "messagesPerHour": 100,
+      "maxConversationLength": 150
     },
     "usage": {
       "messagesThisMonth": 150,
@@ -124,13 +205,17 @@ If a user requests a tier not in your API key's `allowedTiers`, they are automat
       "currentConversationLength": 0
     },
     "remaining": {
-      "messagesThisMonth": 4850,
-      "messagesToday": 188,
-      "messagesThisHour": 47
+      "messagesThisMonth": 9850,
+      "messagesToday": 488,
+      "messagesThisHour": 97
     }
   }
 }
 ```
+
+> **Note:** The `limits` reflect any custom limits configured in the dashboard.
+
+---
 
 ## HTTP Response Headers
 
@@ -140,10 +225,12 @@ All message API responses include quota information in headers:
 |--------|-------------|---------|
 | `X-Membership-Tier` | User's current tier | `premium` |
 | `X-Quota-Monthly-Used` | Messages used this month | `150` |
-| `X-Quota-Monthly-Limit` | Monthly message limit | `5000` |
+| `X-Quota-Monthly-Limit` | Monthly message limit | `10000` |
 | `X-Quota-Daily-Used` | Messages used today | `12` |
-| `X-Quota-Daily-Limit` | Daily message limit | `200` |
+| `X-Quota-Daily-Limit` | Daily message limit | `500` |
 | `Retry-After` | Seconds until quota resets (on 429) | `3600` |
+
+---
 
 ## Quota Exceeded (429 Response)
 
@@ -157,12 +244,12 @@ When a user exceeds their quota, the API returns a `429 Too Many Requests` respo
     "type": "monthly_quota_exceeded",
     "tier": "free",
     "limits": {
-      "messagesPerMonth": 50,
-      "messagesPerDay": 10,
+      "messagesPerMonth": 100,
+      "messagesPerDay": 20,
       "messagesPerHour": 5
     },
     "usage": {
-      "messagesThisMonth": 50,
+      "messagesThisMonth": 100,
       "messagesToday": 8,
       "messagesThisHour": 3
     },
@@ -176,6 +263,8 @@ When a user exceeds their quota, the API returns a `429 Too Many Requests` respo
 - `daily_quota_exceeded` - Daily limit reached
 - `hourly_quota_exceeded` - Hourly burst limit reached
 
+---
+
 ## Client-Side Quota Warnings
 
 The embed client automatically displays warnings when approaching limits:
@@ -185,6 +274,8 @@ The embed client automatically displays warnings when approaching limits:
 | 80%+ | Warning | Yellow banner |
 | 95%+ | Critical | Red banner |
 | 100% | Blocked | Error message |
+
+---
 
 ## Best Practices
 
@@ -250,6 +341,8 @@ async function onSubscriptionChange(newPlan) {
 }
 ```
 
+---
+
 ## Custom Tier Limits
 
 You can override default limits per-tier when configuring your API key:
@@ -272,13 +365,22 @@ You can override default limits per-tier when configuring your API key:
 
 Custom limits are merged with defaults - only specified fields are overridden.
 
+---
+
 ## Troubleshooting
 
 ### "Tier not allowed" Warning
 
 If you see `Membership tier "X" not allowed, downgrading to "Y"` in logs:
-1. Ensure the tier is included in your API key's `allowedTiers`
-2. Check that the tier name is spelled correctly (case-sensitive)
+1. Check your API key's allowed tiers in the Divinci dashboard
+2. Ensure the tier name is spelled correctly (case-sensitive)
+
+### Custom Limits Not Applied
+
+If custom limits aren't being used:
+1. Verify you saved the API key after making changes in the dashboard
+2. Check that the tier is in the "Allowed Tiers" list
+3. Log out and back in to get a fresh token with updated limits
 
 ### Quota Not Updating
 
@@ -293,6 +395,8 @@ If `tierConfig` is null after login:
 1. Ensure `externalUser: true` in embed config
 2. Check the login response for errors
 3. Verify the refresh token is valid
+
+---
 
 ## Related Documentation
 
