@@ -23,6 +23,104 @@ When integrating the Divinci embed client, you can pass a membership tier during
 
 ---
 
+## Security Model
+
+### Why Two Parameters?
+
+The login function requires both a `refreshToken` and an optional `tier` parameter:
+
+```javascript
+await chat.auth.login(refreshToken, { tier: "premium" });
+```
+
+**Q: Doesn't the refreshToken already indicate the tier?**
+
+No. The `refreshToken` identifies the **user** (via APIKeySession/APIKeyUser), but it doesn't encode their subscription tier. The tier comes from **your** subscription system, not ours. This separation allows you to:
+
+- Use your existing subscription/billing system
+- Change tiers without re-issuing tokens
+- Map your custom plan names to our tier levels
+
+**Q: Isn't passing the tier from the browser insecure?**
+
+No, because the browser is just a messenger. The actual security comes from server-side validation against your API key's `allowedTiers` configuration.
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant User as User Browser
+    participant App as Your App
+    participant Embed as Embed Client
+    participant API as Divinci API
+    participant DB as API Key Config
+
+    Note over App: User authenticates with your app
+    App->>App: Determine user's subscription tier
+    App->>User: Return refreshToken + tier info
+
+    User->>Embed: login(refreshToken, { tier: "premium" })
+    Embed->>API: POST /embed/validate-login
+
+    API->>DB: Load API Key config
+    DB-->>API: allowedTiers: ["free", "basic", "premium"]
+
+    alt Requested tier is allowed
+        API->>API: Grant requested tier
+    else Requested tier NOT allowed
+        API->>API: Downgrade to highest allowed tier
+        Note over API: Logs warning: "premium" not allowed
+    end
+
+    API->>API: Get quota usage from Redis
+    API-->>Embed: { tierConfig, accessToken, userInfo }
+    Embed-->>User: Login successful
+```
+
+### Trust Boundaries
+
+| Component | Who Controls | What It Does |
+|-----------|--------------|--------------|
+| `refreshToken` | Your backend generates, our server validates | Identifies the user |
+| `tier` parameter | Your backend determines, client forwards | Claims user's subscription level |
+| `allowedTiers` | You configure on API key (server-side) | **Security gate** - limits which tiers can be granted |
+| `customTierLimits` | You configure on API key (server-side) | Override default quotas per tier |
+
+### Server-Side Validation
+
+When a login request arrives, the server validates the tier claim:
+
+```
+Requested: "enterprise"
+API Key allowedTiers: ["free", "basic", "premium"]
+
+Result: Downgraded to "premium" (highest allowed)
+```
+
+**A malicious user cannot escalate privileges** by manipulating the browser because:
+
+1. The `allowedTiers` configuration lives on your API key (server-side)
+2. Our server validates every tier claim against this configuration
+3. Invalid or unauthorized tiers are automatically downgraded
+
+### Tier Validation Logic
+
+```mermaid
+flowchart TD
+    A[Login Request with tier] --> B{Is tier valid?}
+    B -->|No/Missing| C[Default to 'free']
+    B -->|Yes| D{Is tier in allowedTiers?}
+    D -->|Yes| E[Grant requested tier]
+    D -->|No| F[Downgrade to highest allowed tier]
+    C --> G[Return tierConfig]
+    E --> G
+    F --> G
+    G --> H[Check quota in Redis]
+    H --> I[Return login response]
+```
+
+---
+
 ## Admin Configuration (Divinci Dashboard)
 
 White-label release admins can configure membership tiers directly in the Divinci dashboard when creating or editing an API key.
