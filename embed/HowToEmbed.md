@@ -116,3 +116,21 @@ if(USER_TOKEN) {
   divinciChat.auth.login(USER_TOKEN);
 }
 ```
+
+
+
+## Step 5: Membership Tiers (Optional)
+
+Control how many messages users can send based on their subscription level in your application.
+
+```javascript
+// When logging in, pass the user's membership tier
+const { tierConfig } = await divinciChat.auth.login(USER_TOKEN, {
+  tier: "premium"  // "free", "basic", "premium", "enterprise", or "unlimited"
+});
+
+// Check remaining quota
+console.log(`${tierConfig.remaining.messagesThisMonth} messages remaining this month`);
+```
+
+For full details on tiers, quotas, and handling limits, see [Membership Tiers](./MembershipTiers.md).
