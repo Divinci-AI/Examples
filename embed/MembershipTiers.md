@@ -200,7 +200,28 @@ Map your SaaS subscription plans to Divinci tiers:
 
 ## Developer Integration
 
-### 1. Login with Membership Tier
+### 1. Configure Allowed Tiers (API Key Setup)
+
+When creating or updating your API key in the Divinci dashboard, specify which tiers your integration supports:
+
+```json
+{
+  "name": "My App API Key",
+  "allowedOrigins": ["https://myapp.com"],
+  "allowedTiers": ["free", "basic", "premium"],
+  "customTierLimits": {
+    "premium": {
+      "messagesPerMonth": 10000
+    }
+  }
+}
+```
+
+**Fields:**
+- `allowedTiers` - Array of tiers this API key can grant to users
+- `customTierLimits` - Optional per-tier limit overrides
+
+### 2. Login with Membership Tier
 
 When authenticating a user, pass their tier in the login request:
 
@@ -242,9 +263,9 @@ const { tierConfig } = await chat.auth.login(userRefreshToken, {
 console.log(`User has ${tierConfig.remaining.messagesThisMonth} messages left this month`);
 ```
 
-### 2. Tier Validation & Downgrading
+### 3. Tier Validation & Downgrading
 
-If a user requests a tier not in your API key's allowed tiers, they are automatically downgraded to the highest allowed tier:
+If a user requests a tier not in your API key's `allowedTiers`, they are automatically downgraded to the highest allowed tier:
 
 | Requested Tier | Allowed Tiers | Assigned Tier |
 |----------------|---------------|---------------|
@@ -420,6 +441,30 @@ async function onSubscriptionChange(newPlan) {
 
 ---
 
+## Custom Tier Limits
+
+You can override default limits per-tier when configuring your API key:
+
+```json
+{
+  "customTierLimits": {
+    "free": {
+      "messagesPerMonth": 100,
+      "messagesPerDay": 20
+    },
+    "premium": {
+      "messagesPerMonth": 10000,
+      "messagesPerDay": 500,
+      "messagesPerHour": 100
+    }
+  }
+}
+```
+
+Custom limits are merged with defaults - only specified fields are overridden.
+
+---
+
 ## Troubleshooting
 
 ### "Tier not allowed" Warning
@@ -431,7 +476,7 @@ If you see `Membership tier "X" not allowed, downgrading to "Y"` in logs:
 ### Custom Limits Not Applied
 
 If custom limits aren't being used:
-1. Verify you saved the API key after making changes
+1. Verify you saved the API key after making changes in the dashboard
 2. Check that the tier is in the "Allowed Tiers" list
 3. Log out and back in to get a fresh token with updated limits
 
