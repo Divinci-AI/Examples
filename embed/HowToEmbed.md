@@ -123,17 +123,46 @@ if(USER_TOKEN) {
 
 Control how many messages users can send based on their subscription level in your application.
 
+> **Security Note:** Membership tiers are set **server-side only** during the initial `/embed/login` call (Step 2). The browser client cannot modify or escalate tiers.
+
+### Server-Side: Set Tier During Login
+
+Your backend sets the tier when obtaining the JWT:
+
+```typescript
+async function getDivinciJWT(userId, username, picture, subscriptionTier) {
+  const response = await fetch("https://api.divinci.ai/embed/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      apikey: "YOUR_API_KEY",
+      userId: userId,
+      username: username,
+      picture: picture,
+      membershipTier: subscriptionTier  // "free", "basic", "premium", "enterprise", or "unlimited"
+    })
+  });
+
+  const data = await response.json();
+  console.log(`Tier assigned: ${data.tierAssigned}`);  // May be downgraded if not in allowedTiers
+  return data.refreshToken;
+}
+```
+
+### Client-Side: Access Tier Config After Login
+
+The client receives the tier configuration (set server-side) after validating the session:
+
 ```javascript
-// When logging in, pass the user's membership tier
-const { tierConfig } = await divinciChat.auth.login(USER_TOKEN, {
-  tier: "premium"  // "free", "basic", "premium", "enterprise", or "unlimited"
-});
+// Login with refreshToken only - tier comes from server
+const { tierConfig } = await divinciChat.auth.login(USER_TOKEN);
 
 // Check remaining quota
+console.log(`Tier: ${tierConfig.tier}`);
 console.log(`${tierConfig.remaining.messagesThisMonth} messages remaining this month`);
 ```
 
-For full details on tiers, quotas, and handling limits, see [Membership Tiers](./MembershipTiers.md).
+For full details on tiers, quotas, security model, and handling limits, see [Membership Tiers](./MembershipTiers.md).
 
 
 
