@@ -25,99 +25,107 @@ When integrating the Divinci embed client, you can pass a membership tier during
 
 ## Security Model
 
-### Why Two Parameters?
+### Server-Side Tier Enforcement
 
-The login function requires both a `refreshToken` and an optional `tier` parameter:
+**The membership tier is set server-side during initial login, not by the browser.**
 
-```javascript
-await chat.auth.login(refreshToken, { tier: "premium" });
-```
+This is a critical security design: the tier is determined by your backend (which has access to the API key) and stored with the user record. The browser client cannot modify or escalate the tier.
 
-**Q: Doesn't the refreshToken already indicate the tier?**
+### Two-Step Authentication Flow
 
-No. The `refreshToken` identifies the **user** (via APIKeySession/APIKeyUser), but it doesn't encode their subscription tier. The tier comes from **your** subscription system, not ours. This separation allows you to:
+1. **Initial Login** (`/embed/login`) - **Server-side, requires API key**
+   - Your backend calls this endpoint with the API key and user's subscription tier
+   - Tier is validated against `allowedTiers` and stored with the user record
+   - Returns a `refreshToken` for the client
 
-- Use your existing subscription/billing system
-- Change tiers without re-issuing tokens
-- Map your custom plan names to our tier levels
-
-**Q: Isn't passing the tier from the browser insecure?**
-
-No, because the browser is just a messenger. The actual security comes from server-side validation against your API key's `allowedTiers` configuration.
-
-### Authentication Flow
+2. **Validate Login** (`/embed/validate-login`) - **Client-side, no tier accepted**
+   - Browser uses the `refreshToken` to get an `accessToken`
+   - Uses the **stored** tier from step 1
+   - Tier cannot be changed or escalated by the client
 
 ```mermaid
 sequenceDiagram
-    participant User as User Browser
-    participant App as Your App
-    participant Embed as Embed Client
+    participant Browser as User Browser
+    participant Backend as Your Backend
     participant API as Divinci API
-    participant DB as API Key Config
+    participant DB as User Record
 
-    Note over App: User authenticates with your app
-    App->>App: Determine user's subscription tier
-    App->>User: Return refreshToken + tier info
+    Note over Browser,Backend: User authenticates with your app
+    Backend->>Backend: Look up user's subscription tier
+    Backend->>API: POST /embed/login (API key + tier)
+    API->>API: Validate tier against allowedTiers
+    API->>DB: Store tier with user record
+    API-->>Backend: { refreshToken, tierAssigned }
+    Backend-->>Browser: refreshToken
 
-    User->>Embed: login(refreshToken, { tier: "premium" })
-    Embed->>API: POST /embed/validate-login
-
-    API->>DB: Load API Key config
-    DB-->>API: allowedTiers: ["free", "basic", "premium"]
-
-    alt Requested tier is allowed
-        API->>API: Grant requested tier
-    else Requested tier NOT allowed
-        API->>API: Downgrade to highest allowed tier
-        Note over API: Logs warning: "premium" not allowed
-    end
-
-    API->>API: Get quota usage from Redis
-    API-->>Embed: { tierConfig, accessToken, userInfo }
-    Embed-->>User: Login successful
+    Note over Browser: Later: Client validates session
+    Browser->>API: POST /embed/validate-login (refreshToken only)
+    API->>DB: Load user record with stored tier
+    API->>API: Use stored tier, ignore any client tier
+    API-->>Browser: { accessToken, tierConfig }
 ```
+
+### Why This Design?
+
+**Q: Why not let the browser pass the tier?**
+
+Allowing the browser to specify the tier would be a security vulnerability. A malicious user could:
+1. Inspect the JavaScript code
+2. Modify the tier parameter to claim "enterprise" or "unlimited"
+3. Escalate their privileges
+
+**Q: What prevents privilege escalation now?**
+
+The tier is set **only** during `/embed/login`, which:
+1. Requires the secret API key (never exposed to browsers)
+2. Validates the tier against `allowedTiers`
+3. Stores the validated tier with the user record
+
+The browser-accessible `/embed/validate-login` endpoint:
+1. **Ignores** any `membershipTier` parameter in the request
+2. Uses **only** the tier stored in the user record
+3. Cannot escalate privileges even with a valid `refreshToken`
 
 ### Trust Boundaries
 
-| Component | Who Controls | What It Does |
-|-----------|--------------|--------------|
-| `refreshToken` | Your backend generates, our server validates | Identifies the user |
-| `tier` parameter | Your backend determines, client forwards | Claims user's subscription level |
-| `allowedTiers` | You configure on API key (server-side) | **Security gate** - limits which tiers can be granted |
-| `customTierLimits` | You configure on API key (server-side) | Override default quotas per tier |
+| Component | Where It Lives | Security Role |
+|-----------|----------------|---------------|
+| API Key (`apikey`) | Your backend only | Authenticates the initial login request |
+| `membershipTier` | Set in `/embed/login` | Stored server-side, cannot be modified by client |
+| `allowedTiers` | API key configuration | Limits which tiers can be assigned |
+| `refreshToken` | Browser (via your backend) | Identifies user, does NOT contain tier info |
 
-### Server-Side Validation
-
-When a login request arrives, the server validates the tier claim:
-
-```
-Requested: "enterprise"
-API Key allowedTiers: ["free", "basic", "premium"]
-
-Result: Downgraded to "premium" (highest allowed)
-```
-
-**A malicious user cannot escalate privileges** by manipulating the browser because:
-
-1. The `allowedTiers` configuration lives on your API key (server-side)
-2. Our server validates every tier claim against this configuration
-3. Invalid or unauthorized tiers are automatically downgraded
-
-### Tier Validation Logic
+### Tier Validation Flow
 
 ```mermaid
 flowchart TD
-    A[Login Request with tier] --> B{Is tier valid?}
-    B -->|No/Missing| C[Default to 'free']
-    B -->|Yes| D{Is tier in allowedTiers?}
-    D -->|Yes| E[Grant requested tier]
-    D -->|No| F[Downgrade to highest allowed tier]
-    C --> G[Return tierConfig]
-    E --> G
-    F --> G
-    G --> H[Check quota in Redis]
-    H --> I[Return login response]
+    A[/embed/login with API key + tier/] --> B{Is tier in allowedTiers?}
+    B -->|Yes| C[Store tier with user]
+    B -->|No| D[Downgrade to highest allowed]
+    D --> C
+    C --> E[Return refreshToken + tierAssigned]
+
+    F[/embed/validate-login with refreshToken/] --> G[Load user record]
+    G --> H[Use STORED tier]
+    H --> I{API key config changed?}
+    I -->|Tier still allowed| J[Keep current tier]
+    I -->|Tier no longer allowed| K[Auto-downgrade]
+    J --> L[Return accessToken + tierConfig]
+    K --> L
 ```
+
+### Automatic Tier Downgrade
+
+If you change your API key's `allowedTiers` configuration, users with now-invalid tiers are automatically downgraded on their next validation:
+
+```
+User's stored tier: "enterprise"
+API Key allowedTiers (updated): ["free", "basic", "premium"]
+
+Result: User auto-downgraded to "premium" (highest allowed)
+```
+
+This ensures your tier configuration always takes precedence.
 
 ---
 
@@ -227,25 +235,32 @@ When authenticating a user, pass their tier in the login request:
 
 #### Server-Side: Get Divinci JWT with Tier
 
+Your backend calls `/embed/login` with the API key and the user's subscription tier:
+
 ```typescript
 async function getDivinciJWT(userId: string, username: string, tier: string) {
   const response = await fetch("https://api.divinci.ai/embed/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      apikey: "YOUR_API_KEY",
+      apikey: "YOUR_API_KEY",  // Secret API key - never expose to browser
       userId: userId,
       username: username,
-      membershipTier: tier  // Pass the user's subscription tier
+      membershipTier: tier     // Tier is SET here, server-side only
     })
   });
 
   const data = await response.json();
+  // tierAssigned tells you which tier was actually granted
+  // (may be downgraded if requested tier wasn't in allowedTiers)
+  console.log(`Tier assigned: ${data.tierAssigned}`);
   return data.refreshToken;
 }
 ```
 
-#### Client-Side: Login with Tier
+#### Client-Side: Validate Session
+
+The client uses the `refreshToken` to validate the session. The tier is already stored server-side:
 
 ```javascript
 const { DivinciChat } = window.DIVINCI_AI;
@@ -255,13 +270,16 @@ const chat = new DivinciChat({
   externalUser: true,
 });
 
-// Login with tier - returns tier configuration
-const { tierConfig } = await chat.auth.login(userRefreshToken, {
-  tier: "premium"  // User's subscription tier from your system
-});
+// Login with refreshToken only - tier comes from server
+// Note: Any tier parameter passed here is IGNORED for security
+const { tierConfig } = await chat.auth.login(userRefreshToken);
 
-console.log(`User has ${tierConfig.remaining.messagesThisMonth} messages left this month`);
+// tierConfig contains the stored tier from /embed/login
+console.log(`User tier: ${tierConfig.tier}`);
+console.log(`Messages remaining: ${tierConfig.remaining.messagesThisMonth}`);
 ```
+
+**Important:** The `chat.auth.login()` method does NOT accept a tier parameter. Any tier must be set during the server-side `/embed/login` call.
 
 ### 3. Tier Validation & Downgrading
 
@@ -272,6 +290,34 @@ If a user requests a tier not in your API key's `allowedTiers`, they are automat
 | `enterprise` | `["free", "basic", "premium"]` | `premium` |
 | `premium` | `["free", "basic"]` | `basic` |
 | `unlimited` | `["free"]` | `free` |
+
+### 4. Unauthenticated Users
+
+Users who aren't logged into your application cannot use the chat. The embed client handles this automatically.
+
+**Don't call `auth.login()` when there's no token:**
+
+```javascript
+const { DivinciChat } = window.DIVINCI_AI;
+
+const chat = new DivinciChat({
+  releaseId: "your-release-id",
+  externalUser: true,
+});
+
+// Append the chat iframe
+container.appendChild(chat.iframe);
+
+// Only call auth.login() if you have a token
+if (userRefreshToken) {
+  chat.auth.login(userRefreshToken);
+}
+// If no token, the embed automatically shows:
+// "Please login through your application"
+// "Authentication is managed by your parent application."
+```
+
+**Do not pass a blank or empty refreshToken.** Simply skip the `auth.login()` call entirely. The embed will display a login prompt to the user.
 
 ---
 
@@ -377,20 +423,36 @@ The embed client automatically displays warnings when approaching limits:
 
 ## Best Practices
 
-### 1. Map Your Subscription Tiers
+### 1. Map Your Subscription Tiers (Server-Side)
 
-Create a mapping between your subscription plans and Divinci tiers:
+Create a mapping between your subscription plans and Divinci tiers **in your backend**:
 
-```javascript
-const TIER_MAPPING = {
+```typescript
+// In your backend - NOT in browser JavaScript
+const TIER_MAPPING: Record<string, string> = {
   "starter": "free",
   "pro": "basic",
   "business": "premium",
   "enterprise": "enterprise"
 };
 
-const divinciTier = TIER_MAPPING[user.subscriptionPlan] || "free";
-await chat.auth.login(token, { tier: divinciTier });
+async function getDivinciToken(user: User) {
+  const divinciTier = TIER_MAPPING[user.subscriptionPlan] || "free";
+
+  // Call /embed/login from your backend with the API key
+  const response = await fetch("https://api.divinci.ai/embed/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      apikey: process.env.DIVINCI_API_KEY,
+      userId: user.id,
+      username: user.name,
+      membershipTier: divinciTier
+    })
+  });
+
+  return response.json();
+}
 ```
 
 ### 2. Handle Quota Exceeded Gracefully
@@ -429,13 +491,43 @@ function displayQuotaStatus(tierConfig) {
 
 ### 4. Sync Tier on Subscription Changes
 
-When a user upgrades or downgrades their subscription, re-authenticate to update their tier:
+When a user upgrades or downgrades their subscription, you need to:
+1. Call `/embed/login` from your backend with the new tier
+2. Send the new `refreshToken` to the client
+3. Have the client re-authenticate
+
+```typescript
+// Backend: Re-issue token with new tier
+async function onSubscriptionChange(userId: string, newPlan: string) {
+  const newTier = TIER_MAPPING[newPlan];
+
+  // Create new token with updated tier
+  const response = await fetch("https://api.divinci.ai/embed/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      apikey: process.env.DIVINCI_API_KEY,
+      userId: userId,
+      username: user.name,
+      membershipTier: newTier  // New tier set server-side
+    })
+  });
+
+  const { refreshToken, tierAssigned } = await response.json();
+  return { refreshToken, tierAssigned };
+}
+```
 
 ```javascript
-async function onSubscriptionChange(newPlan) {
-  const newTier = TIER_MAPPING[newPlan];
+// Client: Re-authenticate with new token from backend
+async function handleSubscriptionUpgrade() {
+  // Your backend returns new refreshToken with updated tier
+  const { refreshToken } = await yourApi.getNewDivinciToken();
+
   await chat.auth.logout();
-  await chat.auth.login(refreshToken, { tier: newTier });
+  const { tierConfig } = await chat.auth.login(refreshToken);
+
+  console.log(`Upgraded to: ${tierConfig.tier}`);
 }
 ```
 
