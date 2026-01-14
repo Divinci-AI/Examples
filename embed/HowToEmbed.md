@@ -180,6 +180,7 @@ The embed client supports several optional features that can be enabled via scri
 | Metrics | `metrics` | `metrics` | Enables usage metrics tracking |
 | Help Requests | `help-requests` | `helpRequests` | Allows users to request human assistance |
 | Notifications | `notifications` | `notifications` | Enables notification features |
+| Quick Menu | `quick-menu` | `quickMenu` | Shows hover actions on messages (copy, emoji, read aloud) |
 | Debug Mode | `debug` | `debug` | Enables console logging for debugging |
 | Custom CSS | `css-src` | `cssSrc` | URL to custom CSS for theming |
 
@@ -358,6 +359,45 @@ const chat = new DivinciChat({
 
 ---
 
+### Quick Menu
+
+When enabled, a Quick Menu overlay appears when users hover over chat messages. This provides quick actions for interacting with messages.
+
+**What it shows:**
+- **Copy Message** - Copy the message content to clipboard
+- **Emoji Reactions** - Add emoji reactions to messages (persisted for authenticated users)
+- **Read Aloud** - Text-to-speech for assistant messages (browser support required)
+
+**Features:**
+- Appears on hover over any message bubble
+- Keyboard accessible (Escape to close emoji picker)
+- Dark mode support via CSS variables
+- Responsive design for smaller embeds
+
+**Script Tag Usage:**
+```html
+<script
+  src="https://embed.divinci.ai/embed-script.js"
+  divinci-release-id="YOUR_RELEASE_ID"
+  quick-menu
+></script>
+```
+
+**JavaScript Usage:**
+```javascript
+const chat = new DivinciChat({
+  releaseId: "YOUR_RELEASE_ID",
+  quickMenu: true,
+});
+```
+
+**Notes:**
+- Emoji reactions are only persisted for authenticated users (anonymous chats show the picker but don't save reactions)
+- Read Aloud uses the browser's SpeechSynthesis API and may not be available in all browsers
+- The menu automatically hides when the mouse leaves the message area
+
+---
+
 ### Combining Multiple Features
 
 You can enable multiple features simultaneously:
@@ -370,6 +410,7 @@ You can enable multiple features simultaneously:
   divinci-external-user
   context-bubbles
   product-recommendations
+  quick-menu
   toggleable
   debug
 ></script>
@@ -382,6 +423,7 @@ const chat = new DivinciChat({
   externalUser: true,
   contextBubbles: true,
   productRecommendations: true,
+  quickMenu: true,
   toggleable: true,
   debug: true,
 });
@@ -469,6 +511,7 @@ By default, the embed script exposes `window.DIVINCI_AI`. You can customize this
 | `metrics` | boolean | `false` | Enable metrics tracking |
 | `help-requests` | boolean | `false` | Enable help request button |
 | `notifications` | boolean | `false` | Enable notifications |
+| `quick-menu` | boolean | `false` | Show hover actions on messages |
 | `data-global-name` | string | `DIVINCI_AI` | Custom global variable name |
 
 **JavaScript Options (DivinciChat constructor):**
@@ -485,5 +528,6 @@ interface CreateDivinciChatOptions {
   helpRequests?: boolean;      // Default: false
   notifications?: boolean;     // Default: false
   contextBubbles?: boolean;    // Default: false
+  quickMenu?: boolean;         // Default: false
 }
 ```
